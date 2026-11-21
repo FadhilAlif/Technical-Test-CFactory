@@ -1,12 +1,35 @@
+import { ImageProcessorWorkspace } from '@/components/ImageProcessorWorkspace';
+import { ThemeToggleBar } from '@/components/ThemeToggleBar';
+import styles from '@/components/image-processor.module.css';
+
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-center p-6">
-      <h1 className="text-3xl font-bold tracking-tight text-white">
-        CFactory Async Image Processor
-      </h1>
-      <p className="mt-2 text-sm text-slate-400">
-        Upload JPG, PNG, or WebP (max 20MB) • Async BullMQ + Sharp Worker Pipeline
-      </p>
-    </main>
+    <div className={styles.page}>
+      <a href="#processor-heading" className="skip-link visually-hidden">
+        Skip to main content
+      </a>
+
+      <header className={styles.header}>
+        <div className={styles.headerCopy}>
+          <h1 id="processor-heading" tabIndex={-1} className={styles.title}>
+            Async image processor
+          </h1>
+          <p className={styles.subtitle}>
+            Upload a JPG, PNG, or WebP image up to 20 MB. The API returns a job ID right away while an isolated worker resizes, compresses, and converts it to WebP.
+          </p>
+        </div>
+
+        <ThemeToggleBar />
+      </header>
+
+      <main>
+        <ImageProcessorWorkspace />
+      </main>
+
+      <footer className={styles.footer}>
+        <span>Hono API delegator · BullMQ + Sharp worker · NeonDB PostgreSQL</span>
+        <span>Max 20 MB · 1280px longest side · 80% WebP</span>
+      </footer>
+    </div>
   );
 }
