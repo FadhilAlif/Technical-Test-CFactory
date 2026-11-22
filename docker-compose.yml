@@ -1,0 +1,108 @@
+name: cfactory-async-image-processor
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: caip-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - caip-network
+
+  backend-api:
+    build:
+      context: .
+      dockerfile: backend-api/Dockerfile
+    container_name: caip-backend-api
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env before running docker compose}
+      REDIS_URL: redis://redis:6379
+      BULLMQ_QUEUE_NAME: ${BULLMQ_QUEUE_NAME:-image-processing-queue}
+      STORAGE_DIR: /app/storage
+      MAX_FILE_SIZE_BYTES: ${MAX_FILE_SIZE_BYTES:-20971520}
+      PORT: 4000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - image_storage:/app/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - caip-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: caip-worker
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env before running docker compose}
+      REDIS_URL: redis://redis:6379
+      BULLMQ_QUEUE_NAME: ${BULLMQ_QUEUE_NAME:-image-processing-queue}
+      STORAGE_DIR: /app/storage
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      STALE_JOB_THRESHOLD_MINUTES: ${STALE_JOB_THRESHOLD_MINUTES:-2}
+    volumes:
+      - image_storage:/app/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+    stop_grace_period: 35s
+    restart: unless-stopped
+    networks:
+      - caip-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+        NEXT_PUBLIC_MAX_FILE_SIZE_MB: ${NEXT_PUBLIC_MAX_FILE_SIZE_MB:-20}
+    container_name: caip-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      backend-api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - caip-network
+
+volumes:
+  redis_data:
+  image_storage:
+
+networks:
+  caip-network:
+    driver: bridge
