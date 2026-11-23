@@ -1,9 +1,24 @@
 import type { Metadata } from 'next';
+import { Geist, Inter } from 'next/font/google';
+import '@/components/arc/foundation.css';
 import './globals.css';
 
+const geist = Geist({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-geist',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-inter',
+});
+
 export const metadata: Metadata = {
-  title: 'CFactory Async Image Processor (CAIP)',
-  description: 'Asynchronous image resizing, compression (80%), and WebP conversion powered by Hono, BullMQ, NeonDB & Sharp.',
+  title: 'Image processor | CFactory',
+  description:
+    'Upload a JPG, PNG, or WebP image up to 20 MB for asynchronous resizing, compression, and WebP conversion.',
 };
 
 export default function RootLayout({
@@ -12,10 +27,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased">
-        {children}
-      </body>
+    <html
+      lang="en"
+      className={`${geist.variable} ${inter.variable}`}
+      data-accent="blue"
+      suppressHydrationWarning
+    >
+      <body>{children}</body>
     </html>
   );
 }
